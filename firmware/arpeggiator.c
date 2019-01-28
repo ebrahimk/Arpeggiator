@@ -146,6 +146,19 @@ int8_t chk_buttonsC(uint8_t buttons){
  *
  *
  *****************************************/
+int8_t chk_buttonsF(uint8_t buttons){
+        static uint16_t state[8] = {0, 0, 0, 0, 0, 0, 0, 0}; //holds present state
+        state[buttons] = (state[buttons] << 1) | (! bit_is_clear(PINF, buttons)) | 0xE000;
+        if (state[buttons] == 0xF000) return 1;
+        return 0;
+}
+
+/*****************************************
+ *
+ *
+ *
+ *
+ *****************************************/
 uint8_t display_pattern(uint8_t display_seq3[], uint8_t display_seq4[], uint8_t length, uint8_t speed){
 	static uint8_t dis_timer = 0;
 	static uint8_t count = 0; 
@@ -585,7 +598,6 @@ ISR(TIMER0_OVF_vect){
 		beat2++; 
 	}
 
-
 	//make PORTA an input port with pullups, write all 0's to DDRA and all 1's to PORTA 
 	DDRA = 0x00;
 	PORTA = 0xFF; 
@@ -610,18 +622,13 @@ ISR(TIMER0_OVF_vect){
 
 
 	//check for state change input, save notes, delete notes, switch channel
-	for(i = 0; i < 5 ; i++){
+	for(i = 0; i < 3 ; i++){
 		if(chk_buttonsC(i)){
 			if(i == 0 && switch_ch == 1)	//save1				
 				save1 = 1; 
 			if(i == 1)
 				delete1 = 1; 
-			if(i == 2 && switch_ch == 2)      //save1                         
-				save2 = 1;
-			if(i == 3)
-				delete2 = 1;
-			//CHANNEL TWO
-			if(i == 4){		//far left button
+			if(i == 2){		//far left button
 				if(switch_ch == 1){
 					switch_ch = 2;
 					PORTC &= ~((1 << PC7) | (1 << PC6) | (1 << PC5)); 
@@ -636,6 +643,16 @@ ISR(TIMER0_OVF_vect){
 		}
 	}
 
+        //check for channel 2 configurations 
+        for(i = 0; i < 2 ; i++){
+                if(chk_buttonsF(i)){
+                        if(i == 0 && switch_ch == 2)    //save1                         
+                        	save2 = 1;
+   			if(i == 1)
+                                delete2 = 1;
+                }
+        }
+
 	//now check the encoders for input
 	//Connections:
 	//	CLK_INH:	PORTE, bit 6
@@ -643,7 +660,7 @@ ISR(TIMER0_OVF_vect){
 	PORTE |= (1 << PE6);	//parallel load the 74HC165, write a 1 to CLK_INH and a 0 to SHIFT_LD_N
 	PORTE &= ~(1<<PE5); 
 	PORTE &= ~(1 << PE6); 
-	PORTE = (1 << PE5); 	//enable shift mode reactivate CLK, CLK_ING = 0 and SHIFT_LD_N = 1
+	PORTE |= (1 << PE5); 	//enable shift mode reactivate CLK, CLK_ING = 0 and SHIFT_LD_N = 1
 	encoder_val = spi_read();	//read the data
 	PORTE |= (1 << PE6);		//disable this slave device so we can write to bar graph
 
@@ -780,8 +797,9 @@ int main(){
 	//set port bits 4-7 B as outputs, a 1 in DDRB.n indicates that pin n of the given port is an output 
 	DDRB = 0xFF;
 
-	//set bits 6, 5  and 3(volume control) and 2 (active high reset radio) of PORTE as outputs, for SHIFT_LD_N and CLK_INH and Radio RESET
-	DDRE = 0x6C;	
+	//set outputs for LEDS, bits 6, 5 for SHFTLD and CLK INHIBIT
+	DDRE = 0xFF;	
+//	PORTE = 0x4f;
 
 	//set PORTD bit 2 as output for OE_N input of Bar graph display (in lab3 this pin was tied to PB7, we need this in lab 4 for Timer2 PWM output)
 	DDRD = 0xC4;	//added PORTD pin 6 as output
@@ -790,6 +808,10 @@ int main(){
 	DDRC = 0xE0;		//all input except pins 6 and 7 (CHANNEL LEDS)
 	PORTC = 0x1F;		//attach pullups	
 	PORTC |= (1 << PC7) | (1 << PC5);	//initialize colors
+
+	//set PRTF, used for channel 2 configuration
+	DDRF = 0x00;	//use all pins as inputs 
+	PORTF = 0xFF; 	//configure pull ups on all pins
 
 	//Disable the tristate buffer, write unconnected pin Y5 LOW
 	PORTB =  (1 << PB4) | (0 << PB5) | (1 << PB6);	
@@ -818,6 +840,7 @@ int main(){
 	attribute1 = 1;
 	count = rate1;
 
+	//channel 2 initializers
 	rate2 = 1;
 	steps2 = 2;
 	octave2 = 5;

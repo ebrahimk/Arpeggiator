@@ -211,7 +211,7 @@ volatile uint16_t beat2;
 volatile uint16_t max_beat2;
 volatile uint8_t  notes2;
 
-//arpegiator channel 1 tuning controls
+//arpegiator channel 2 tuning controls
 volatile uint8_t save2;
 volatile uint8_t delete2;
 
@@ -222,6 +222,12 @@ volatile uint8_t rate2;
 volatile uint8_t steps2;
 volatile uint8_t octave2;
 uint8_t rest_flag2; 
+
+
+//arpegiator channel 2 tuning controls
+volatile uint8_t play;			//starts playing any savaed sequence
+volatile uint8_t stop;			//stops channel two from playing synth returns to normal mode
+volatile uint8_t sequence_to_play[4]; 
 
 
 void song0(uint16_t note) { //beaver fight song (Max and Kellen)

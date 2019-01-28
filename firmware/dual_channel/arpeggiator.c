@@ -1,58 +1,17 @@
 /************************************
  *Author: 	Kamron Ebrahimi
- *Lab:		Lab 6 code 
- *Description: 	This labs utilizes the ATmega128's SPI and timer/counters to periodically
- *		interrupt the processor and poll rotary encoders and pushbuttons for input.
- *		Rotary encoders increment a count displayed on a seven segment display and
- *		the pushbuttons set a mode, which is displayed on a bar graph display, 
- *		which determines how much the count is incremented by per rotary encoder turn.	
- *Date:		12/6/2018
+ *Description: 
  *************************************/
-//#define F_CPU 16000000 // cpu speed in hertz 
 #define TRUE 0x01
 #define FALSE 0x00
 #include <avr/io.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
-#include <string.h>
 #include <stdlib.h>
-#include "hd44780.h"
-#include "lm73_functions.h"
-#include "twi_master.h"
-#include "uart_functions.h"
-#include "si4734.h"
-#include <avr/eeprom.h>
 #include "music.h"
-
-#define RX_VOLUME 0x4000
-
-void toggle_radio(uint8_t flag);
-uint8_t map_signal(uint8_t data);
-
-//globals for music
-//uint8_t channel1_display[8] = {0xFE, 0xDF, 0xBF, 0xFB, 0xF7, 0xEF, 0xBF, 0xFD};
-//uint8_t channel1_count; 
-//uint8_t display_num = 0;
-
 
 //Count stores the value displayed to the seven seg 
 uint16_t count;
-
-//clock stores the current time
-uint16_t clock; 
-uint8_t hour; 
-uint8_t min; 
-
-//alarm stores the time when the alarm is triggered, same configuration 
-uint16_t alarm;
-uint8_t al_hour;
-uint8_t al_min; 
-
-//alarm toggling 
-uint8_t is_armed; 
-uint8_t prev_state;
-uint8_t alarm_on; 
-uint8_t arm_leds; 
 
 //The previous state of the encoders
 uint8_t prev;
@@ -68,57 +27,6 @@ uint8_t segment_codes[10] = {0xC0, 0xF9, 0xA4, 0xB0, 0x99, 0x92, 0x82, 0xF8, 0x8
 
 //These are the encodings for the value to be written to PORTB, index 0 is digit zero etc etc
 uint8_t digit_select[5] = {0x00, 0x10, 0x20, 0x30, 0x40};
-
-//timing variable for incrementing the minute 
-uint16_t time;
-
-//the current mode the alarm clock operates in, set by the pushbuttons
-uint8_t mode;		 
-
-//timing variable used for blinking the semicolon at one secong intervals
-uint16_t sec; 
-
-//The volume of the clocks alarm, used in a function in main to set OCR3A
-//uint8_t volume; 
-
-//globbal variables for driving the TWI temperature sensor breakout
-char    lcd_string_array[16];  //holds a string to refresh the LCD
-char 	local_temp[8] = {'L'};		//temp will be the final string written to the second line of the LCD
-char	remote_temp[8] = {'R'}; 
-char 	remote_raw[16];
-char 	temp_final[16];
-int	local_bin; 
-int 	remote_bin; 
-extern  uint8_t lm73_wr_buf[2];
-extern uint8_t lm73_rd_buf[2];
-uint8_t is_metric; 
-
-//globals for uart
-volatile uint8_t  rcv_rdy;
-char              rx_char;
-
-//globals for the Radio 
-uint8_t radio_change;
-uint8_t band_change;
-uint8_t radio_alarm; 
-
-uint8_t radio_on; 
-
-enum radio_band{FM, AM, SW};
-volatile enum radio_band current_radio_band;
-
-volatile uint8_t STC_interrupt;  //flag bit to indicate tune or seek is done
-
-uint8_t si4734_tune_status_buf[8]; //buffer for holding tune_status data  
-uint16_t eeprom_fm_freq;
-uint16_t eeprom_am_freq;
-uint16_t eeprom_sw_freq;
-uint8_t  eeprom_volume;
-uint16_t current_fm_freq;
-uint16_t current_am_freq;
-uint16_t current_sw_freq;
-uint8_t  current_volume;
-
 
 /***********************************************************************/
 //                              tcnt0_init                             
@@ -200,25 +108,6 @@ uint8_t spi_read(void){
 	return(SPDR); //return incoming data from SPDR
 }
 
-/********************************************************************
- *Name:			init_radio()
- *Description:		initializes all port i/o operations for setting up the si4734
- *Return:		N/A
- ******************************************************************/
-void init_radio(){
-        DDRE |= (1 << PE7); 			//configure PORTE bits 7 as an output 
-        PORTE |= (1<< PE2);     		//Write a HIGH to the RESET pin of the radio, the radio initiliazes on a falling edge of PE2
-	PORTE &= ~(1 << PE7);			//write a LOW to GPIO2, now on the falling edge the radio will be in TWI mode
-	
-	_delay_ms(100);						
-	PORTE &= ~(1 << PE2);			//send the falling edge to RESET configuring the radio in TWI mode
-	_delay_ms(100); 
-	
-        EIMSK |= (1 << INT7);                   //initialize interrupt 7
-        EICRB |= (1<< ISC71) | (1 << ISC70);    //configure interrupt to occur on rising edge of PORTE7  
-	DDRE &= ~(1 << PE7);  			//set PE7 as an interrupr input	
-}
-
 /****************************************************************************/
 //                            chk_buttons                                      
 //Checks the state of the button number passed to it. It shifts in ones till   
@@ -247,6 +136,19 @@ int8_t chk_buttons(uint8_t buttons){
 int8_t chk_buttonsC(uint8_t buttons){
         static uint16_t state[8] = {0, 0, 0, 0, 0, 0, 0, 0}; //holds present state
         state[buttons] = (state[buttons] << 1) | (! bit_is_clear(PINC, buttons)) | 0xE000;
+        if (state[buttons] == 0xF000) return 1;
+        return 0;
+}
+
+/*****************************************
+ *
+ *
+ *
+ *
+ *****************************************/
+int8_t chk_buttonsF(uint8_t buttons){
+        static uint16_t state[8] = {0, 0, 0, 0, 0, 0, 0, 0}; //holds present state
+        state[buttons] = (state[buttons] << 1) | (! bit_is_clear(PINF, buttons)) | 0xE000;
         if (state[buttons] == 0xF000) return 1;
         return 0;
 }
@@ -340,114 +242,9 @@ void segsum(uint16_t sum, uint8_t colon, uint8_t attribute, uint8_t channel, uin
 		}
 	}
 	else{
-		display_pattern(displays3[8], displays4[8], dis_lengths[8], 20);
+		display_pattern(displays3[0], displays4[0], dis_lengths[0], 20);
 	}
 }
-
-/*
-   void snooze_mode(){
-   clear_display();
-
-   line1_col1();
-   if(radio_alarm)
-   string2lcd("ALARM:R  SNOOZE");
-   else
-   string2lcd("ALARM:A  SNOOZE");
-   al_min += 10; //add ten minutes to the alarm	
-
-//correct for rollover
-if(al_min >= 60){
-al_min = al_min % 60;
-al_hour++; 
-}
-//turn the alarm of
-if(radio_alarm)
-toggle_radio(FALSE); 
-alarm_on = FALSE; 
-is_armed = TRUE;	//10 cycles of the indicator
-// on the next iteration of timer 0 ISR, alarms value will be changed
-}
- */
-
-
-/************************************
- *Name: 		convert()		
- *Description:		This function takes an integer value read in from the LM73 sensors, and performs
- *			a conversion process changing the raw binary number input from the LM73 to a human understandable
- * 			temperature. Furthermore this button checks what state the alarm clock is in, if it is metric
- *			the conversion changes the value to a Celius temperature, otherwise the readout is in standard. 
- ***********************************/
-/*
-   void convert(int temp_bin, char temp_arr[]){
-   float temp;
-   uint8_t decimal_comp; 
-   temp = (-40) + 0.00782*((float)temp_bin-(-5120));  
-   if(!is_metric)
-   temp = (temp *1.8) + 32;
-
-
-   itoa(temp, temp_arr + 1, 10);
-   temp_arr[strlen(temp_arr)] = '.';
-
-   decimal_comp = ((uint8_t)(temp * 10) % 10);
-   itoa(decimal_comp, temp_arr+4, 10);
-
-   decimal_comp = ((uint8_t)(temp * 100) % 10);
-   itoa(decimal_comp, temp_arr+5, 10);
-
-   if(!is_metric)
-   temp_arr[strlen(temp_arr)] = 'F';
-   else
-   temp_arr[strlen(temp_arr)] = 'C';	
-   }
- */
-
-ISR(USART0_RX_vect){			//we need this data as an integer in order to process it
-	static  uint8_t  i;
-	rx_char = UDR0;              //get character
-	remote_raw[i++]=rx_char;  //store in array 
-	//if entire string has arrived, set flag, reset index
-	if(rx_char == '\0'){
-		rcv_rdy=1;
-		remote_raw[--i]  = (' ');     //clear the count field
-		remote_raw[i+1]  = (' ');
-		remote_raw[i+2]  = (' ');
-		i=0;
-	}
-}
-
-/****************************************
- *Name: 		ISR(INT7_vect)
- *Description:		This interrupt is triggered whenever the GPIO2 pin on the si4734 goes high.
- *			This interrupt scheme is used by the radio header library to signal that an operation is completed by the radio	
- *Return:		N/A 
- **************************************/
-ISR(INT7_vect){
-	STC_interrupt = TRUE;
-}
-
-/****************************************
- *Name:			toggle_radio()
- *Description:		turns the radio either on or off and sets some global signalling flags
- *Return:		N/A 
- **************************************/
-/*void toggle_radio(uint8_t flag){						//handles powering the radio down if switching between am and fm 
-  if(flag){
-  set_property(RX_VOLUME, 0x003F);
-  radio_on = TRUE;
-  return; 
-  }
-  if(radio_on)
-  radio_on = FALSE;
-  else
-  radio_on = TRUE;
-
-  if(radio_on)
-  set_property(RX_VOLUME, 0x003F);		//sets the output volume of the radio, set to default value (100%) 63	
-  else
-  set_property(RX_VOLUME, 0x0000);  
-  }
- */
 
 /***********************************************
  *
@@ -801,12 +598,9 @@ ISR(TIMER0_OVF_vect){
 		beat2++; 
 	}
 
-
 	//make PORTA an input port with pullups, write all 0's to DDRA and all 1's to PORTA 
 	DDRA = 0x00;
 	PORTA = 0xFF; 
-	time++;
-	sec++; 
 
 	//enable tristate buffer for pushbutton switches, write PORTC bits 4-6 all HIGH
 	PORTB = (1 << PB4) | (1 << PB5) | (1 << PB6);
@@ -828,18 +622,13 @@ ISR(TIMER0_OVF_vect){
 
 
 	//check for state change input, save notes, delete notes, switch channel
-	for(i = 0; i < 5 ; i++){
+	for(i = 0; i < 3 ; i++){
 		if(chk_buttonsC(i)){
 			if(i == 0 && switch_ch == 1)	//save1				
 				save1 = 1; 
 			if(i == 1)
 				delete1 = 1; 
-			if(i == 2 && switch_ch == 2)      //save1                         
-				save2 = 1;
-			if(i == 3)
-				delete2 = 1;
-			//CHANNEL TWO
-			if(i == 4){		//far left button
+			if(i == 2){		//far left button
 				if(switch_ch == 1){
 					switch_ch = 2;
 					PORTC &= ~((1 << PC7) | (1 << PC6) | (1 << PC5)); 
@@ -854,6 +643,16 @@ ISR(TIMER0_OVF_vect){
 		}
 	}
 
+        //check for channel 2 configurations 
+        for(i = 0; i < 2 ; i++){
+                if(chk_buttonsF(i)){
+                        if(i == 0 && switch_ch == 2)    //save1                         
+                        	save2 = 1;
+   			if(i == 1)
+                                delete2 = 1;
+                }
+        }
+
 	//now check the encoders for input
 	//Connections:
 	//	CLK_INH:	PORTE, bit 6
@@ -861,7 +660,7 @@ ISR(TIMER0_OVF_vect){
 	PORTE |= (1 << PE6);	//parallel load the 74HC165, write a 1 to CLK_INH and a 0 to SHIFT_LD_N
 	PORTE &= ~(1<<PE5); 
 	PORTE &= ~(1 << PE6); 
-	PORTE = (1 << PE5); 	//enable shift mode reactivate CLK, CLK_ING = 0 and SHIFT_LD_N = 1
+	PORTE |= (1 << PE5); 	//enable shift mode reactivate CLK, CLK_ING = 0 and SHIFT_LD_N = 1
 	encoder_val = spi_read();	//read the data
 	PORTE |= (1 << PE6);		//disable this slave device so we can write to bar graph
 
@@ -986,58 +785,6 @@ ISR(TIMER0_OVF_vect){
 }
 
 /***********************************************************************
- *Function:        	map_to_brightness()      
- *Description:         	Takes the result of the ADC calculation. Uses the  
- *                    	result to load Timer 2's OCR2 register witha value that adjusts 
- *                   	the brightness accordingly. 
- *			Configured for smooth transitions with a 10k ohm resistor as R1
- *			Based of experimentation, OCR2 can go as low as 10 before even in a pitch dark room, the LEDs are too dim. 
- ***********************************************************************/
-void map_to_brightness(uint16_t adc_result){
-	if(adc_result <= 200)			//in decreasing brightness	
-		OCR2 = 255; 
-	else if(adc_result <= 300)	
-		OCR2 = 200;
-	else if(adc_result <= 400)
-		OCR2 = 150; 
-	else if(adc_result <= 500)	
-		OCR2 = 100;
-	else if(adc_result <= 600)
-		OCR2 = 80; 
-	else if(adc_result <= 700)
-		OCR2 = 40; 
-	else 
-		OCR2 = 25;
-}
-
-/*******************************************************************
- *Name:			map_signal()
- *Description:		Maps the received signal strength grabbed from the si4734 to a value easily read 
- *			for the bar graph display.  
- *Return:		N/A 
- ******************************************************************/
-uint8_t map_signal(uint8_t data){ 
-	if(data >= 80)
-		return 255;
-	else if(data >= 70)
-		return 127; 
-	else if(data >= 60)
-		return 63;
-	else if(data >= 50)
-		return 31; 
-	else if(data >= 40)
-		return 15;		
-	else if(data >= 30)
-		return 7;
-	else if(data >= 20)
-		return 3;
-	else if(data >= 10)
-		return 1;
-	else
-		return 0; 
-}
-
-/***********************************************************************
  *Function:       	set_volume()      
  *Description:         	This function is called within main. Based off of the 
  *                    	the value in the passed paramter, the value of OCR3A 
@@ -1050,8 +797,9 @@ int main(){
 	//set port bits 4-7 B as outputs, a 1 in DDRB.n indicates that pin n of the given port is an output 
 	DDRB = 0xFF;
 
-	//set bits 6, 5  and 3(volume control) and 2 (active high reset radio) of PORTE as outputs, for SHIFT_LD_N and CLK_INH and Radio RESET
-	DDRE = 0x6C;	
+	//set outputs for LEDS, bits 6, 5 for SHFTLD and CLK INHIBIT
+	DDRE = 0xFF;	
+//	PORTE = 0x4f;
 
 	//set PORTD bit 2 as output for OE_N input of Bar graph display (in lab3 this pin was tied to PB7, we need this in lab 4 for Timer2 PWM output)
 	DDRD = 0xC4;	//added PORTD pin 6 as output
@@ -1061,21 +809,20 @@ int main(){
 	PORTC = 0x1F;		//attach pullups	
 	PORTC |= (1 << PC7) | (1 << PC5);	//initialize colors
 
+	//set PRTF, used for channel 2 configuration
+	DDRF = 0x00;	//use all pins as inputs 
+	PORTF = 0xFF; 	//configure pull ups on all pins
+
 	//Disable the tristate buffer, write unconnected pin Y5 LOW
 	PORTB =  (1 << PB4) | (0 << PB5) | (1 << PB6);	
 
 	//initialize SPI, and timers
 	tcnt0_init();
 	tcnt2_init(); 
-	//	tcnt1_init();
-	//tcnt3_init();
 	spi_init();
-	lcd_init();
-	init_twi();
-	uart_init();
-	init_radio();
 	music_init(); 
-	//enable interrupts
+
+ 	//enable interrupts
 	sei(); 
 
 	//read the initial state of encoders
@@ -1086,33 +833,6 @@ int main(){
 	//initialize global variables
 	digit_to_display = 0;
 
-	hour = 24; 
-
-	min = 0; 
-	time = 0;
-	sec = 0;	
-
-	mode = 1; 
-
-	al_hour = 24; 
-	al_min = 0;
-
-	prev_state = 0;
-	alarm_on = FALSE;
-	is_armed = 0; 
-	arm_leds = 0; 
-
-	is_metric = FALSE; 
-
-	//initialize alarm and clock so we dont triggerthe alarm if uninit
-	alarm = 1;
-	clock = 5;
-
-	//remote sensor and temp globals
-	rcv_rdy = 0;
-	local_bin = 0;
-	remote_bin = 0;
-
 	//music initializers
 	rate1 = 1;
 	steps1 = 2;
@@ -1120,6 +840,7 @@ int main(){
 	attribute1 = 1;
 	count = rate1;
 
+	//channel 2 initializers
 	rate2 = 1;
 	steps2 = 2;
 	octave2 = 5;
@@ -1127,35 +848,10 @@ int main(){
 
 	//start on channel 1
 	switch_ch = 1; 	
+	
+	//set the 7 segment brightness 
+	OCR2 = 255;
 
-	//Initalize ADC, its ports, and configuration
-	DDRF  &= ~(_BV(DDF7)); //make port F bit 7 is ADC input  
-	PORTF &= ~(_BV(PF7));  //port F bit 7 pullups must be off
-	ADMUX = (1 << REFS0) | (1<< MUX2) | (1<<MUX1) | (1<<MUX0);      //single-ended, input PORTF bit 7, right adjusted, 10 bits
-	ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1<< ADPS1) | (1 << ADPS0);       //ADC enabled, don't start yet, single shot mode 
-	uint16_t adc_result; 
-
-	//LM73 TWI interface
-	lm73_wr_buf[0] = LM73_PTR_TEMP; //load lm73_wr_buf[0] with temperature pointer address
-	twi_start_wr(LM73_ADDRESS, lm73_wr_buf, 1);  //start the TWI write process      
-	_delay_ms(2);    //wait for the xfer to finish
-	uint16_t temp_counter = 0; 
-
-	//init radio globals
-	radio_change = FALSE; 
-	current_radio_band = FM; 
-	band_change = FALSE; 
-	radio_alarm = FALSE; 
-	radio_on = FALSE; 
-
-	//	fm_pwr_up();				//send power up command to radio, enable GPIO2 pin to go HIGH when a seek/tune is complete 
-	current_fm_freq = 10630; 		//units of 10kHz
-	//	fm_tune_freq();		 		//send the frequency to tune to, halts execution until EXT7 interrupt is triggered. 
-	//	set_property(RX_VOLUME, 0x0000);	//radio starts OFF
-	current_am_freq = 1240;		 	//local beaver channel
-
-	//	line1_col1();
-	//	string2lcd("ALARM:A NOT SET");         
 	while(1){
 		//bound a counter (0-4) to keep track of the digit to display (so on each iteration of the llop we only target on digit)        
 		digit_to_display = digit_to_display % 5;
@@ -1174,16 +870,6 @@ int main(){
 
 		//update digit to display
 		digit_to_display++;
-
-		//read analog voltage for dimming functionality
-		ADCSRA |= (1 << ADSC);        //poke ADSC and start conversion
-		while((ADCSRA & (1 << ADIF)) != (1<< ADIF)){}//spin while interrupt flag not set
-		ADCSRA |= (1 << ADIF); //its done, clear flag by writing a one 
-		adc_result = ADC; 
-		map_to_brightness(adc_result);                      //read the ADC output as 16 bits
-
-		//set the volume, simply set OCR3A to the volume global variable (uint8_t)
-		//	OCR3A = volume1; 
 
 	}//while
 }//main
