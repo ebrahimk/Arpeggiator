@@ -1,7 +1,7 @@
 SHELL           = /bin/bash
-PRG             =lab6_m128
-OBJS            =lab6_m128.o music.o
-SRCS            =lab6_m128 music.h
+PRG             =arpeggiator
+OBJS            =arpeggiator.o music.o
+SRCS            =arpeggiator music.h
 
 MCU_TARGET     = atmega128
 #MCU_TARGET     = atmega48
@@ -10,7 +10,7 @@ PROGRAMMER_TARGET     = m128
 
 #agressive optimization
 OPTIMIZE       = -O2    # options are 1, 2, 3, s
-#optimize for small lab6_m128
+#optimize for small arpeggiator
 #OPTIMIZE       = -Os    # options are 1, 2, 3, s
 #OPTIMIZE       = -1s    # options are 1, 2, 3, s
 

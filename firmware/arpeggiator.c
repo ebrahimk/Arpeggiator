@@ -229,7 +229,7 @@ void segsum(uint16_t sum, uint8_t colon, uint8_t attribute, uint8_t channel, uin
 		}
 	}
 	else{
-		display_pattern(displays3[8], displays4[8], dis_lengths[8], 20);
+		display_pattern(displays3[0], displays4[0], dis_lengths[0], 20);
 	}
 }
 
