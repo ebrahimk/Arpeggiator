@@ -1049,6 +1049,7 @@ void arpeggiate2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t 
 					//play_note(key[j], 0, octave+run, duration);   //run has already been incremented at this point
 					//notes = j;
 					//play_rest(duration);
+					 sequence_flag = 1;
 					break;
 				}
 				if(_BV(j) & notes_to_play){              //if the given note is set

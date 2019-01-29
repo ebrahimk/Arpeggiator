@@ -28,6 +28,9 @@ uint8_t segment_codes[10] = {0xC0, 0xF9, 0xA4, 0xB0, 0x99, 0x92, 0x82, 0xF8, 0x8
 //These are the encodings for the value to be written to PORTB, index 0 is digit zero etc etc
 uint8_t digit_select[5] = {0x00, 0x10, 0x20, 0x30, 0x40};
 
+//sequence global
+uint8_t repeat_counter; 
+
 /***********************************************************************/
 //                              tcnt0_init                             
 //Initalizes timer/counter0 (TCNT0). TCNT0 is running in async mode
@@ -233,6 +236,8 @@ void segsum(uint16_t sum, uint8_t colon, uint8_t attribute, uint8_t channel, uin
 		case 3:
 			segment_data[1] = 0x40;//0xC0;
 			break;
+		case 4:
+			segment_data[1] = 0x47; //L
 	}
 
 	if(notes_to_play != 0){
@@ -572,6 +577,18 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 						octave2--;
 				}
 				break;
+                        case 4:                                                                 //rate
+                                if(inc){
+                                        if(repeat2 < 8)
+                                                repeat2++;
+                                }
+                                else{
+                                        if(repeat2 > 1){
+                                                repeat2--;
+						repeat_counter = 0;
+					}
+                                }
+                                break;		
 		}
 	}
 }
@@ -701,7 +718,7 @@ ISR(TIMER0_OVF_vect){
 	PORTE |= (1 << PE6);		//disable this slave device so we can write to bar graph
 
 
-	//check the left encoder CONTROL ATTRIBUTE: 1-steps, 2-rate, 3-octave
+	//check the left encoder CONTROL ATTRIBUTE: 1-steps, 2-rate, 3-octave, if in channel 2 repeat
 	if(((prev & 0b11) == 0b11) && ((encoder_val & 0b11) == 0b10)){	//we have clockwise rotation of the encoders, we see a shift from 0b11 to 0b10
 		if(switch_ch == 1){
 			attribute1++;
@@ -710,7 +727,7 @@ ISR(TIMER0_OVF_vect){
 		}
 		if(switch_ch == 2){
 			attribute2++; 
-			if(attribute2 > 3) 
+			if(attribute2 > 4) 
 				attribute2 = 1;
 		}
 	}
@@ -723,7 +740,7 @@ ISR(TIMER0_OVF_vect){
 		if(switch_ch == 2){
 			attribute2--; 
 			if(attribute2 < 1) 
-				attribute2 = 3;
+				attribute2 = 4;
 		}
 	}
 
@@ -767,35 +784,25 @@ ISR(TIMER0_OVF_vect){
 		notes_to_play1 = 0; 
 	}	
 
-
-
-
-/*
-	static uint8_t saved_notes2 = 0;
-	static uint8_t saved2_flag = 0;
-
-	//check for channel 2
-	if(save2){
-		saved_notes2 = notes_to_play2;            //save the notes
-		saved2_flag = 1;
-		save2 = 0;
-	}
-	if(saved2_flag == 1)
-		notes_to_play2 = saved_notes2;
-	if(delete2 == 1){
-		saved2_flag = 0;
-		delete2 = 0;
-		notes_to_play2 = 0; 
-	}
-*/
 	static uint8_t counter = 0; 	
 
 	if(play){
 		if(sequence_flag){
-			counter++; 
-			counter %= 4; 
-			sequence_flag = 0; 
-		        blink_LED(counter);
+			/*if(rate2 == 1 && counter == 3 && (sequence_to_play[counter] == 1 || sequence_to_play[counter] == 2 || sequence_to_play[counter] == 4 || sequence_to_play[counter] == 8 || sequence_to_play[counter] == 16 ||
+			   sequence_to_play[counter] == 32 || sequence_to_play[counter] == 64 || sequence_to_play[counter] == 128 || sequence_to_play[counter] == 256)){
+					repeat_counter += 4; 
+			} 
+			else{*/
+	
+			repeat_counter++; 
+			
+			if(repeat_counter == repeat2){
+				repeat_counter = 0; 
+				counter++; 
+				counter %= 4; 
+		        	blink_LED(counter);
+			}
+			sequence_flag = 0;
 		}
 		notes_to_play2 = sequence_to_play[counter]; 
 	}
@@ -806,9 +813,6 @@ ISR(TIMER0_OVF_vect){
 		stop = 0; 
 		notes_to_play2 = 0; 	
 	}
-
-
-
 
 	//set value to be displayed to the LED 
 	if(switch_ch == 1){
@@ -835,6 +839,9 @@ ISR(TIMER0_OVF_vect){
 			case 3:
 				count = octave2;
 				break;
+			case 4: 
+				count = repeat2; 
+				break; 
 		}
 	}
 
@@ -908,6 +915,7 @@ int main(){
 	octave2 = 5;
 	attribute2 = 1;
 	repeat2 = 1; 
+	repeat_counter =0;
 
 	//sequence constants
 	sequence_flag = 0; 
