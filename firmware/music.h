@@ -23,16 +23,19 @@ extern volatile uint16_t beat2;
 extern volatile uint16_t max_beat2;
 extern volatile uint8_t  notes2;
 
-//control consts ch2 
-extern volatile uint8_t save2;
-extern volatile uint8_t delete2;
-
 //musical consts ch2
 extern volatile uint8_t attribute2;
 extern volatile uint8_t notes_to_play2;
 extern volatile uint8_t rate2;
 extern volatile uint8_t steps2;
 extern volatile uint8_t octave2;
+extern volatile uint8_t repeat2;
+
+//sequence constants
+extern volatile uint8_t play;         
+extern volatile uint8_t stop;        
+extern volatile uint8_t sequence_flag;
+extern volatile uint8_t sequence_to_play[4];
 
 void arpeggiate2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t octave, uint8_t step);
 void arpeggiate(uint8_t note, uint8_t notes, uint8_t duration, uint8_t octave, uint8_t step);

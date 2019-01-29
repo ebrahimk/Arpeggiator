@@ -211,10 +211,6 @@ volatile uint16_t beat2;
 volatile uint16_t max_beat2;
 volatile uint8_t  notes2;
 
-//arpegiator channel 2 tuning controls
-volatile uint8_t save2;
-volatile uint8_t delete2;
-
 //muscal const ch1
 volatile uint8_t attribute2;
 volatile uint8_t notes_to_play2;
@@ -222,13 +218,14 @@ volatile uint8_t rate2;
 volatile uint8_t steps2;
 volatile uint8_t octave2;
 uint8_t rest_flag2; 
+volatile uint8_t repeat2; 
 
 
 //arpegiator channel 2 tuning controls
 volatile uint8_t play;			//starts playing any savaed sequence
 volatile uint8_t stop;			//stops channel two from playing synth returns to normal mode
 volatile uint8_t sequence_to_play[4]; 
-
+volatile uint8_t sequence_flag; 
 
 void song0(uint16_t note) { //beaver fight song (Max and Kellen)
   switch (note) {
@@ -1022,8 +1019,10 @@ void arpeggiate2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t 
 					}
 					notes2 = -1;
 					run++;
-					if(run == step)
+					if(run == step){  //set a flag right here for going onto the next bar in the sequence
 						run = 0;
+						sequence_flag = 1; 
+					}
 				}
 				//edge case for handling single note input on single step 
 				if((_BV(j) & notes_to_play) && (notes_to_play == 1 || notes_to_play == 2 || notes_to_play == 4 || notes_to_play == 8 || notes_to_play == 16 || notes_to_play == 32 || notes_to_play == 64 || notes_to_play == 128) && (step == 1)){

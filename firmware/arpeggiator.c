@@ -576,6 +576,29 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 	}
 }
 
+void blink_LED(uint8_t counter){
+	switch(counter){
+		case 0:
+			PORTE |= (1<<PE0);
+			PORTE &= ~(1<<PE3);
+			break;
+                case 1:
+                        PORTE |= (1<<PE1);
+                        PORTE &= ~(1<<PE0);
+                        break;
+                case 2:
+                        PORTE |= (1<<PE2);
+                        PORTE &= ~(1<<PE1);
+                        break;
+                case 3:
+                        PORTE |= (1<<PE3);
+                        PORTE &= ~(1<<PE2);
+                        break;
+		case 5:
+			PORTE &= ~((1<<PE0) | (1<<PE1) | (1<<PE2) | (1<<PE3));
+	}
+}
+
 //!!!!1
 /***********************************************************************
  *Function: 		timer0 ISR          
@@ -643,15 +666,28 @@ ISR(TIMER0_OVF_vect){
 		}
 	}
 
-        //check for channel 2 configurations 
-        for(i = 0; i < 2 ; i++){
-                if(chk_buttonsF(i)){
-                        if(i == 0 && switch_ch == 2)    //save1                         
-                        	save2 = 1;
-   			if(i == 1)
-                                delete2 = 1;
-                }
-        }
+	//check for channel 2 configurations 
+	for(i = 0; i < 6 ; i++){
+		if(chk_buttonsF(i)){
+			if(i == 0 && switch_ch == 2)
+				sequence_to_play[0] = notes_to_play2;
+			if(i == 1 && switch_ch == 2)
+				sequence_to_play[1] = notes_to_play2;
+			if(i == 2 && switch_ch == 2)
+				sequence_to_play[2] = notes_to_play2;
+			if(i == 3 && switch_ch == 2)
+				sequence_to_play[3] = notes_to_play2;
+			if(i == 4){
+				play = 1;
+				PORTE |= (1<<PE4); 		//sequence playing LED
+				sequence_flag = 0; 
+			}
+			if(i == 5){
+				stop = 1;
+				PORTE &= ~(1<<PE4);
+			}
+		}
+	}
 
 	//now check the encoders for input
 	//Connections:
@@ -731,8 +767,13 @@ ISR(TIMER0_OVF_vect){
 		notes_to_play1 = 0; 
 	}	
 
+
+
+
+/*
 	static uint8_t saved_notes2 = 0;
 	static uint8_t saved2_flag = 0;
+
 	//check for channel 2
 	if(save2){
 		saved_notes2 = notes_to_play2;            //save the notes
@@ -746,6 +787,27 @@ ISR(TIMER0_OVF_vect){
 		delete2 = 0;
 		notes_to_play2 = 0; 
 	}
+*/
+	static uint8_t counter = 0; 	
+
+	if(play){
+		if(sequence_flag){
+			counter++; 
+			counter %= 4; 
+			sequence_flag = 0; 
+		        blink_LED(counter);
+		}
+		notes_to_play2 = sequence_to_play[counter]; 
+	}
+	if(stop){
+		counter = 0; 
+		blink_LED(5);	//turn all LEDS off 
+		play = 0; 
+		stop = 0; 
+		notes_to_play2 = 0; 	
+	}
+
+
 
 
 	//set value to be displayed to the LED 
@@ -799,7 +861,7 @@ int main(){
 
 	//set outputs for LEDS, bits 6, 5 for SHFTLD and CLK INHIBIT
 	DDRE = 0xFF;	
-//	PORTE = 0x4f;
+	//	PORTE = 0x4f;
 
 	//set PORTD bit 2 as output for OE_N input of Bar graph display (in lab3 this pin was tied to PB7, we need this in lab 4 for Timer2 PWM output)
 	DDRD = 0xC4;	//added PORTD pin 6 as output
@@ -822,7 +884,7 @@ int main(){
 	spi_init();
 	music_init(); 
 
- 	//enable interrupts
+	//enable interrupts
 	sei(); 
 
 	//read the initial state of encoders
@@ -845,10 +907,16 @@ int main(){
 	steps2 = 2;
 	octave2 = 5;
 	attribute2 = 1;
+	repeat2 = 1; 
+
+	//sequence constants
+	sequence_flag = 0; 
+	play = 0;
+	stop = 0; 
 
 	//start on channel 1
 	switch_ch = 1; 	
-	
+
 	//set the 7 segment brightness 
 	OCR2 = 255;
 
