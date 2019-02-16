@@ -947,32 +947,32 @@ unsigned int reverseBits(unsigned int num)
 void arpeggiateDown(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t octave, uint8_t step){
         char* key = C_d;
         uint8_t i,j;
-        static uint8_t run = 2;
+        static uint8_t run = 0;
         static uint8_t rest_flag_arp = 0;
 	
 	//mirror the notes to play
 	notes_to_play = reverseBits(notes_to_play);
 
         if(notes_to_play == 0){
-                run = step;
+                run = 0;
                 notes = -1;
                 play_rest(1);
                 if(switch_ch == 1)
                         write_bargraph(notes_to_play);
         }
         else{
-                for(i = run; i >= 0; i--){
+                for(i = run; i < step; i++){
                         for(j = notes; j < 8; j++ ){
                                 if(notes == 7){
                                         if((_BV(j) & notes_to_play) && (j == 7) && (octave+run) != 8){  //verify that we are not trying to play on the 9th octave (Crash)
                                                 play_note(key[j], 0, octave+run, duration);     //run has already been incremented at this point
                                                 if(switch_ch == 1)
-                                                        write_bargraph(1);
+                                                        write_bargraph(_BV(j));
                                         }
                                         notes = -1;
-                                        run--;
-                                        if(run == 0)
-                                                run = step;
+                                        run++;
+                                        if(run == step)
+                                                run = 0;
                                 }
 				//edge case for handling single note input on single step 
 				if((_BV(j) & notes_to_play) && (notes_to_play == 1 || notes_to_play == 2 || notes_to_play == 4 || notes_to_play == 8 || notes_to_play == 16 || notes_to_play == 32 || notes_to_play == 64 || notes_to_play == 128) && (step == 1)){
@@ -1008,13 +1008,14 @@ void arpeggiateDown(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8
 						play_note(key[j], 0, octave+run, duration);
 					notes = j;
 					if(switch_ch == 1)
-							write_bargraph(_BV((j*-1)+7));
+						write_bargraph(_BV((j*-1)+7));
 					break;
 				}
 			}
 			break;
 		}
 	}
+
 }
 
 
@@ -1085,83 +1086,6 @@ void arpeggiate(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t o
 		}
 	}
 
-}
-
-void arpeggiateDown2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t octave, uint8_t step){
-        char* key = C_d;
-        uint8_t i,j;
-        static uint8_t run = 2;
-        static uint8_t rest_flag_arp = 0;
-
-        //mirror the notes to play
-        notes_to_play = reverseBits(notes_to_play);
-
-        if(notes_to_play == 0){
-                run = step;
-                notes2 = -1;
-                play_rest2(1);
-                if(switch_ch == 2)
-                        write_bargraph(notes_to_play);
-        }
-        else{
-                for(i = run; i >= 0; i--){
-                        for(j = notes2; j < 8; j++ ){
-                                if(notes2 == 7){
-                                        if((_BV(j) & notes_to_play) && (j == 7) && (octave+run) != 8){  //verify that we are not trying to play on the 9th octave (Crash)
-                                                play_note2(key[j], 0, octave+run, duration);     //run has already been incremented at this point
-                                                if(switch_ch == 2)
-                                                        write_bargraph(1);
-                                        }
-                                        notes2 = -1;
-                                        run--;
-                                        if(run == 0){
-                                                run = step;
-						sequence_flag = 1;
-					}
-                                }
-                                //edge case for handling single note input on single step 
-                                if((_BV(j) & notes_to_play) && (notes_to_play == 1 || notes_to_play == 2 || notes_to_play == 4 || notes_to_play == 8 || notes_to_play == 16 || notes_to_play == 32 || notes_to_play == 64 || notes_to_play == 128) && (step == 1)){
-                                        if(rest_flag_arp == 0){
-                                                if((_BV(j) & notes_to_play) && (j == 7) && (octave+run) != 8){          //play thr octave at intervals
-                                                        play_note2(key[j], 0, octave+run+1, duration);
-                                                }
-                                                else{
-                                                        play_note2(key[j], 0, octave, duration);         //play all other notes at intervals
-                                                }
-                                                rest_flag_arp = 1;
-                                                if(switch_ch == 2)
-                                                        write_bargraph(_BV((j*-1)+7));
-                                        }
-                                        else{
-                                                rest_flag_arp = 0;
-                                                play_rest2(duration);
-                                                if(switch_ch == 2)
-                                                        write_bargraph(0);
-                                                break;
-                                        }
-                                }
-                                if((_BV(j) & notes_to_play) && (j == 7)) {
-                                        if(notes_to_play == 128 && steps2 == 1)
-                                                sequence_flag = 1;
-					//play_note(key[j], 0, octave+run, duration);   //run has already been incremented at this point
-                                        //notes = j;
-                                        //play_rest(duration);
-                                        break;
-                                }
-                                if(_BV(j) & notes_to_play){              //if the given note is set
-                                        if(j == 0)
-                                                play_note2(key[j], 0, octave+run+1, duration);
-                                        else
-                                                play_note2(key[j], 0, octave+run, duration);
-                                        notes2 = j;
-                                        if(switch_ch == 2)
-                                                        write_bargraph(_BV((j*-1)+7));
-                                        break;
-                                }
-                        }
-                        break;
-                }
-        }
 }
 
 void arpeggiate2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t octave, uint8_t step){
@@ -1749,7 +1673,6 @@ ISR(TIMER3_COMPA_vect) {
 		rest_flag2 = 0; 
 		notes2++;               //move on to the next note
 		//play_song(song, notes);//and play it
-	//	arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
-	arpeggiateDown2(notes2, notes_to_play2, rate2, octave2, steps2);
+		arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
 	}
 }
