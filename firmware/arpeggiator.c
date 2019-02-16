@@ -237,7 +237,11 @@ void segsum(uint16_t sum, uint8_t colon, uint8_t attribute, uint8_t channel, uin
 			segment_data[1] = 0x40;//0xC0;
 			break;
 		case 4:
+                        segment_data[1] = 0x08;//A
+                        break;
+		case 5:
 			segment_data[1] = 0x47; //L
+			break;
 	}
 
 	if(notes_to_play != 0){
@@ -417,6 +421,17 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 						octave1--;
 				}
 				break;
+
+                        case 4:      					//arp type 
+                                if(inc){
+                                        if(type1 < 2)
+                                                type1++;
+                                }
+                                else{
+                                        if(type1 > 1)
+                                                type1--;
+                                }
+                                break;
 		}
 	}
 	else if(channel == 2){
@@ -577,7 +592,17 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 						octave2--;
 				}
 				break;
-                        case 4:                                                                 //rate
+                        case 4:                                         //arp type 
+                                if(inc){
+                                        if(type2 < 2)
+                                                type2++;
+                                }
+                                else{
+                                        if(type2 > 1)
+                                                type2--;
+                                }
+                                break;
+			case 5:                                                                 //rate
                                 if(inc){
                                         if(repeat2 < 8)
                                                 repeat2++;
@@ -588,7 +613,7 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 						repeat_counter = 0;
 					}
                                 }
-                                break;		
+                                break;
 		}
 	}
 }
@@ -722,12 +747,12 @@ ISR(TIMER0_OVF_vect){
 	if(((prev & 0b11) == 0b11) && ((encoder_val & 0b11) == 0b10)){	//we have clockwise rotation of the encoders, we see a shift from 0b11 to 0b10
 		if(switch_ch == 1){
 			attribute1++;
-			if(attribute1 > 3)
+			if(attribute1 > 4)
 				attribute1 = 1;
 		}
 		if(switch_ch == 2){
 			attribute2++; 
-			if(attribute2 > 4) 
+			if(attribute2 > 5) 
 				attribute2 = 1;
 		}
 	}
@@ -735,12 +760,12 @@ ISR(TIMER0_OVF_vect){
 		if(switch_ch == 1){
 			attribute1--; 
 			if(attribute1 < 1)
-				attribute1 = 3;
+				attribute1 = 4;
 		}
 		if(switch_ch == 2){
 			attribute2--; 
 			if(attribute2 < 1) 
-				attribute2 = 4;
+				attribute2 = 5;
 		}
 	}
 
@@ -826,6 +851,9 @@ ISR(TIMER0_OVF_vect){
 			case 3:
 				count = octave1;
 				break;
+			case 4:
+				count = type1;
+				break;
 		}	
 	}
 	else{
@@ -839,7 +867,10 @@ ISR(TIMER0_OVF_vect){
 			case 3:
 				count = octave2;
 				break;
-			case 4: 
+                        case 4: 
+                                count = type2;
+                                break; 
+			case 5: 
 				count = repeat2; 
 				break; 
 		}
@@ -851,102 +882,104 @@ ISR(TIMER0_OVF_vect){
 		segsum(count, 0xff, attribute1, 1, notes_to_play1); 		//value, colon, attribute, channel, 0xfc to turn on colon 
 	else
 		segsum(count, 0xff, attribute2, 1, notes_to_play2); 
-}
+	}
 
-/***********************************************************************
- *Function:       	set_volume()      
- *Description:         	This function is called within main. Based off of the 
- *                    	the value in the passed paramter, the value of OCR3A 
- *                   	will change accordingly to detemine the volume of the 
- *                  	audio amplifier output.
- *			NOTE: timer 3 is configured in inverting mode, 
- *			the smaller the value of OCR3A, the louder the amplifier!
- ***********************************************************************/
-int main(){
-	//set port bits 4-7 B as outputs, a 1 in DDRB.n indicates that pin n of the given port is an output 
-	DDRB = 0xFF;
+	/***********************************************************************
+	 *Function:       	set_volume()      
+	 *Description:         	This function is called within main. Based off of the 
+	 *                    	the value in the passed paramter, the value of OCR3A 
+	 *                   	will change accordingly to detemine the volume of the 
+	 *                  	audio amplifier output.
+	 *			NOTE: timer 3 is configured in inverting mode, 
+	 *			the smaller the value of OCR3A, the louder the amplifier!
+	 ***********************************************************************/
+	int main(){
+		//set port bits 4-7 B as outputs, a 1 in DDRB.n indicates that pin n of the given port is an output 
+		DDRB = 0xFF;
 
-	//set outputs for LEDS, bits 6, 5 for SHFTLD and CLK INHIBIT
-	DDRE = 0xFF;	
-	//	PORTE = 0x4f;
+		//set outputs for LEDS, bits 6, 5 for SHFTLD and CLK INHIBIT
+		DDRE = 0xFF;	
+		//	PORTE = 0x4f;
 
-	//set PORTD bit 2 as output for OE_N input of Bar graph display (in lab3 this pin was tied to PB7, we need this in lab 4 for Timer2 PWM output)
-	DDRD = 0xC4;	//added PORTD pin 6 as output
+		//set PORTD bit 2 as output for OE_N input of Bar graph display (in lab3 this pin was tied to PB7, we need this in lab 4 for Timer2 PWM output)
+		DDRD = 0xC4;	//added PORTD pin 6 as output
 
-	//set PORTC is used as a Software PWM PORT C bit 0
-	DDRC = 0xE0;		//all input except pins 6 and 7 (CHANNEL LEDS)
-	PORTC = 0x1F;		//attach pullups	
-	PORTC |= (1 << PC7) | (1 << PC5);	//initialize colors
+		//set PORTC is used as a Software PWM PORT C bit 0
+		DDRC = 0xE0;		//all input except pins 6 and 7 (CHANNEL LEDS)
+		PORTC = 0x1F;		//attach pullups	
+		PORTC |= (1 << PC7) | (1 << PC5);	//initialize colors
 
-	//set PRTF, used for channel 2 configuration
-	DDRF = 0x00;	//use all pins as inputs 
-	PORTF = 0xFF; 	//configure pull ups on all pins
+		//set PRTF, used for channel 2 configuration
+		DDRF = 0x00;	//use all pins as inputs 
+		PORTF = 0xFF; 	//configure pull ups on all pins
 
-	//Disable the tristate buffer, write unconnected pin Y5 LOW
-	PORTB =  (1 << PB4) | (0 << PB5) | (1 << PB6);	
+		//Disable the tristate buffer, write unconnected pin Y5 LOW
+		PORTB =  (1 << PB4) | (0 << PB5) | (1 << PB6);	
 
-	//initialize SPI, and timers
-	tcnt0_init();
-	tcnt2_init(); 
-	spi_init();
-	music_init(); 
+		//initialize SPI, and timers
+		tcnt0_init();
+		tcnt2_init(); 
+		spi_init();
+		music_init(); 
 
-	//enable interrupts
-	sei(); 
+		//enable interrupts
+		sei(); 
 
-	//read the initial state of encoders
-	PORTE |= (1 << PE6);     
-	PORTE |= (1 << PE5);
-	prev = spi_read();
+		//read the initial state of encoders
+		PORTE |= (1 << PE6);     
+		PORTE |= (1 << PE5);
+		prev = spi_read();
 
-	//initialize global variables
-	digit_to_display = 0;
+		//initialize global variables
+		digit_to_display = 0;
 
-	//music initializers
-	rate1 = 1;
-	steps1 = 2;
-	octave1 = 3;
-	attribute1 = 1;
-	count = rate1;
+		//music initializers
+		type1 = 1;
+		rate1 = 1;
+		steps1 = 2;
+		octave1 = 3;
+		attribute1 = 1;
+		count = rate1;
 
-	//channel 2 initializers
-	rate2 = 1;
-	steps2 = 2;
-	octave2 = 5;
-	attribute2 = 1;
-	repeat2 = 1; 
-	repeat_counter =0;
+		//channel 2 initializers
+		type2 = 1;
+		rate2 = 1;
+		steps2 = 2;
+		octave2 = 5;
+		attribute2 = 1;
+		repeat2 = 1; 
+		repeat_counter =0;
 
-	//sequence constants
-	sequence_flag = 0; 
-	play = 0;
-	stop = 0; 
+		//sequence constants
+		sequence_flag = 0; 
+		play = 0;
+		stop = 0; 
 
-	//start on channel 1
-	switch_ch = 1; 	
+		//start on channel 1
+		switch_ch = 1; 	
 
-	//set the 7 segment brightness 
-	OCR2 = 255;
+		//set the 7 segment brightness 
+		OCR2 = 255;
 
-	while(1){
-		//bound a counter (0-4) to keep track of the digit to display (so on each iteration of the llop we only target on digit)        
-		digit_to_display = digit_to_display % 5;
+		while(1){
+			//bound a counter (0-4) to keep track of the digit to display (so on each iteration of the llop we only target on digit)        
+			digit_to_display = digit_to_display % 5;
 
-		//make PORTA an output
-		DDRA = 0xFF; 
+			//make PORTA an output
+			DDRA = 0xFF; 
 
-		//send 7 segment code to LED segments on each iteration we only update a single digit
-		PORTA = segment_data[digit_to_display]; 
+			//send 7 segment code to LED segments on each iteration we only update a single digit
+			PORTA = segment_data[digit_to_display]; 
 
-		//send PORTB the digit to display
-		PORTB = digit_select[digit_to_display]; 	
+			//send PORTB the digit to display
+			PORTB = digit_select[digit_to_display]; 	
 
-		//delay to ensure the segment reachs full brightness
-		_delay_ms(1); 		
+			//delay to ensure the segment reachs full brightness
+			_delay_ms(1); 		
 
-		//update digit to display
-		digit_to_display++;
+			//update digit to display
+			digit_to_display++;
 
-	}//while
-}//main
+		}//while
+	}//main
 

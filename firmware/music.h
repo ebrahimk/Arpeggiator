@@ -16,6 +16,7 @@ extern volatile uint8_t notes_to_play1;
 extern volatile uint8_t rate1;
 extern volatile uint8_t steps1; 
 extern volatile uint8_t octave1;
+extern volatile uint8_t type1;
 
 /***********************************/
 
@@ -30,6 +31,7 @@ extern volatile uint8_t rate2;
 extern volatile uint8_t steps2;
 extern volatile uint8_t octave2;
 extern volatile uint8_t repeat2;
+extern volatile uint8_t type2;
 
 //sequence constants
 extern volatile uint8_t play;         

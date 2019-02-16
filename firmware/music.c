@@ -206,6 +206,8 @@ volatile uint8_t notes_to_play1;
 volatile uint8_t rate1;
 volatile uint8_t steps1; 
 volatile uint8_t octave1;
+volatile uint8_t type1;
+
 uint8_t rest_flag;
 
 
@@ -222,7 +224,7 @@ volatile uint8_t steps2;
 volatile uint8_t octave2;
 uint8_t rest_flag2; 
 volatile uint8_t repeat2; 
-
+volatile uint8_t type2;
 
 //arpegiator channel 2 tuning controls
 volatile uint8_t play;			//starts playing any savaed sequence
@@ -1736,9 +1738,10 @@ ISR(TIMER1_COMPA_vect) {
 		rest_flag = 0; 
 		notes++;               //move on to the next note
 		//play_song(song, notes);//and play it
-		//arpeggiate(notes, notes_to_play1, rate1, octave1, steps1);
-
-		arpeggiateDown(notes, notes_to_play1, rate1, octave1, steps1);
+		if(type1 == 1)
+			arpeggiate(notes, notes_to_play1, rate1, octave1, steps1);
+		else if(type1 == 2)
+			arpeggiateDown(notes, notes_to_play1, rate1, octave1, steps1);
 	}
 }
 
@@ -1749,7 +1752,9 @@ ISR(TIMER3_COMPA_vect) {
 		rest_flag2 = 0; 
 		notes2++;               //move on to the next note
 		//play_song(song, notes);//and play it
-	//	arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
-	arpeggiateDown2(notes2, notes_to_play2, rate2, octave2, steps2);
+		if(type2 == 1)
+			arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
+		else if(type2 == 2)
+			arpeggiateDown2(notes2, notes_to_play2, rate2, octave2, steps2);
 	}
 }
