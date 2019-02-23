@@ -1,2 +1,4 @@
 # Arpeggiator
-The repository houses code or the Arpeggiator project for the ATmega128
+This is the source code for the dual channel arpeggiator.
+
+## Interface

@@ -210,6 +210,10 @@ volatile uint8_t type1;
 
 uint8_t rest_flag;
 
+//UP down and down up behavior                        //added to top of music.c, added to music.h, need to wire
+volatile uint8_t p_flag1;
+volatile uint8_t p_flag2;
+
 
 /************ CHANNEL TWO *************/
 volatile uint16_t beat2;
@@ -958,6 +962,12 @@ void arpeggiateDown(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8
         if(notes_to_play == 0){
                 run = step;
                 notes = -1;
+
+                if(type1 == 3)
+                   p_flag1 = 1;
+               else if(type1 == 4)
+                   p_flag1 = 0; 
+
                 play_rest(1);
                 if(switch_ch == 1)
                         write_bargraph(notes_to_play);
@@ -973,14 +983,16 @@ void arpeggiateDown(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8
                                         }
                                         notes = -1;
                                         run--;
-                                        if(run == 0)
+                                        if(run == 0){
+                                           		p_flag1 = 1;
                                                 run = step;
+                                        }
                                 }
 				//edge case for handling single note input on single step 
 				if((_BV(j) & notes_to_play) && (notes_to_play == 1 || notes_to_play == 2 || notes_to_play == 4 || notes_to_play == 8 || notes_to_play == 16 || notes_to_play == 32 || notes_to_play == 64 || notes_to_play == 128) && (step == 1)){
 					if(rest_flag_arp == 0){
 						if((_BV(j) & notes_to_play) && (j == 7) && (octave+run) != 8){          //play thr octave at intervals
-							play_note(key[j], 0, octave+run+1, duration);
+							play_note(key[j], 0, octave+run, duration);
 						}
 						else{
 							play_note(key[j], 0, octave, duration);         //play all other notes at intervals
@@ -1019,7 +1031,7 @@ void arpeggiateDown(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8
 	}
 }
 
-
+//edge case we want up down for single note across octaves 
 //notes: notes is the incremental count that holds which note we need to play
 void arpeggiate(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t octave, uint8_t step){
 	char* key = C;   
@@ -1030,6 +1042,12 @@ void arpeggiate(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t o
 	if(notes_to_play == 0){
 		run = 0;
 		notes = -1;
+
+      if(type1 == 3)
+         p_flag1 = 1;
+      else if(type1 == 4)
+         p_flag1 = 0; 
+
 		play_rest(1);
 		if(switch_ch == 1)
 			write_bargraph(notes_to_play); 
@@ -1045,8 +1063,10 @@ void arpeggiate(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t o
 					}
 					notes = -1;
 					run++;
-					if(run == step)
+					if(run == step){  
+						p_flag1 = 0;
 						run = 0; 
+               }
 				}
 				//edge case for handling single note input on single step 
 				if((_BV(j) & notes_to_play) && (notes_to_play == 1 || notes_to_play == 2 || notes_to_play == 4 || notes_to_play == 8 || notes_to_play == 16 || notes_to_play == 32 || notes_to_play == 64 || notes_to_play == 128) && (step == 1)){
@@ -1101,6 +1121,12 @@ void arpeggiateDown2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint
         if(notes_to_play == 0){
                 run = step;
                 notes2 = -1;
+
+                if(type2 == 3)
+                     p_flag2 = 1;
+                else if(type2 == 4)
+                     p_flag2 = 0; 
+                
                 play_rest2(1);
                 if(switch_ch == 2)
                         write_bargraph(notes_to_play);
@@ -1118,14 +1144,16 @@ void arpeggiateDown2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint
                                         run--;
                                         if(run == 0){
                                                 run = step;
-						sequence_flag = 1;
-					}
+                                                p_flag2 = 1;
+                                                if(type2 == 2 || type2 == 3)
+						                                 sequence_flag = 1;
+					                           }
                                 }
                                 //edge case for handling single note input on single step 
                                 if((_BV(j) & notes_to_play) && (notes_to_play == 1 || notes_to_play == 2 || notes_to_play == 4 || notes_to_play == 8 || notes_to_play == 16 || notes_to_play == 32 || notes_to_play == 64 || notes_to_play == 128) && (step == 1)){
                                         if(rest_flag_arp == 0){
                                                 if((_BV(j) & notes_to_play) && (j == 7) && (octave+run) != 8){          //play thr octave at intervals
-                                                        play_note2(key[j], 0, octave+run+1, duration);
+                                                        play_note2(key[j], 0, octave+run, duration);
                                                 }
                                                 else{
                                                         play_note2(key[j], 0, octave, duration);         //play all other notes at intervals
@@ -1175,6 +1203,12 @@ void arpeggiate2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t 
 	if(notes_to_play == 0){
 		run = 0;
 		notes2 = -1;
+
+      if(type2 == 3)
+         p_flag2 = 1;
+      else if(type2 == 4)
+         p_flag2 = 0; 
+
 		play_rest2(1);
 		if(switch_ch == 2)
 			write_bargraph(notes_to_play);
@@ -1192,7 +1226,9 @@ void arpeggiate2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t 
 					run++;
 					if(run == step){  //set a flag right here for going onto the next bar in the sequence
 						run = 0;
-						sequence_flag = 1; 
+                  p_flag2 = 0;
+                  if(type2 == 1 || type2 == 4)
+						   sequence_flag = 1; 
 					}
 				}
 				//edge case for handling single note input on single step 
@@ -1673,7 +1709,8 @@ void play_note2(char note, uint8_t flat, uint8_t octave, uint8_t duration) {
 }
 
 
-
+//consider doing an upward run, clearing the lowest notes from notes to play and the highest, then switching to a downward run... That should honestly work just fine
+//THIS IS FIRE! 
 
 
 
@@ -1726,6 +1763,36 @@ void music_init(void) {
 	rest_flag2 = 0;
 } 
 
+//this function will chop out the highest and lowest note in the sequence of notes to play
+//kinda shitty way to do this
+uint8_t process_notes(uint8_t n){
+   uint8_t new = n;
+   int i;
+   for(i = 0; i < 8; i++){
+      if(n & (1<<i))                //if the bit is set
+         new &= ~(1<<i);   
+   }
+   for(i = 7; i >= 0; i--){
+      if(n & (1<<i))                //if the bit is set
+         new &= ~(1<<i);
+   }   
+   return new; 
+}
+
+uint8_t check_notes(uint8_t n){
+   uint8_t count = 0; 
+   int i;
+   for(i = 0; i < 8; i++){
+      if(n & (1<<i)){
+         count++;
+      }
+   }
+   if(count == 2)
+      return 1;
+   return 0; 
+}
+
+
 /*********************************************************************/
 /*                             TIMER1_COMPA                          */
 /*Oscillates pin7, PORTD for alarm tone output                       */
@@ -1742,8 +1809,37 @@ ISR(TIMER1_COMPA_vect) {
 			arpeggiate(notes, notes_to_play1, rate1, octave1, steps1);
 		else if(type1 == 2)
 			arpeggiateDown(notes, notes_to_play1, rate1, octave1, steps1);
+
+
+      //Arpeggiate up down
+      else if(type1 == 3){                        
+         if((check_notes(notes_to_play1) && steps1 == 1) || ((notes_to_play1 == 1 || notes_to_play1 == 2 || notes_to_play1 == 4 || notes_to_play1 == 8 || notes_to_play1 == 16 || notes_to_play1 == 32 || notes_to_play1 == 64 || notes_to_play1 == 128) && (steps1 == 1)))           //if less than three notes just play down 
+               arpeggiate(notes, notes_to_play1, rate1, octave1, steps1);
+         else{
+            if(p_flag1 == 1)                  //after completing the run turn flag to zero, initialze the flag when changing to this mode, set it to one. 
+			      arpeggiate(notes, notes_to_play1, rate1, octave1, steps1);
+            else if(p_flag1 == 0){
+               arpeggiateDown(notes, notes_to_play1, rate1, octave1, steps1);
+            }
+         }
+      }
+
+      //Arpeggiate up down
+      else if(type1 == 4){                        
+         if((check_notes(notes_to_play1) && steps1 == 1) || ((notes_to_play1 == 1 || notes_to_play1 == 2 || notes_to_play1 == 4 || notes_to_play1 == 8 || notes_to_play1 == 16 || notes_to_play1 == 32 || notes_to_play1 == 64 || notes_to_play1 == 128) && (steps1 == 1)))           //if less than three notes just play down 
+               arpeggiateDown(notes, notes_to_play1, rate1, octave1, steps1);
+         else{
+            if(p_flag1 == 0)                  //after completing the run turn flag to zero, initialze the flag when changing to this mode, set it to one. 
+			      arpeggiateDown(notes, notes_to_play1, rate1, octave1, steps1);
+            else if(p_flag1 == 1){
+               arpeggiate(notes, notes_to_play1, rate1, octave1, steps1);
+            }
+         }
+      }
+
 	}
 }
+
 
 ISR(TIMER3_COMPA_vect) {
 	if(rest_flag2 == 0) 
@@ -1756,5 +1852,32 @@ ISR(TIMER3_COMPA_vect) {
 			arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
 		else if(type2 == 2)
 			arpeggiateDown2(notes2, notes_to_play2, rate2, octave2, steps2);
+
+            //Arpeggiate up down
+      else if(type2 == 3){                        
+         if((check_notes(notes_to_play2) && steps2 == 1) || ((notes_to_play2 == 1 || notes_to_play2 == 2 || notes_to_play2 == 4 || notes_to_play2 == 8 || notes_to_play2 == 16 || notes_to_play2 == 32 || notes_to_play2 == 64 || notes_to_play2 == 128) && (steps2 == 1)))           //if less than three notes just play down 
+               arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
+         else{
+            if(p_flag2 == 1)                  //after completing the run turn flag to zero, initialze the flag when changing to this mode, set it to one. 
+			      arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
+            else if(p_flag2 == 0){
+               arpeggiateDown2(notes2, notes_to_play2, rate2, octave2, steps2);
+            }
+         }
+      }
+
+      //Arpeggiate up down
+      else if(type2 == 4){                        
+         if((check_notes(notes_to_play2) && steps2 == 1) || ((notes_to_play2 == 1 || notes_to_play2 == 2 || notes_to_play2 == 4 || notes_to_play2 == 8 || notes_to_play2 == 16 || notes_to_play2 == 32 || notes_to_play2 == 64 || notes_to_play2 == 128) && (steps2 == 1)))           //if less than three notes just play down 
+               arpeggiateDown2(notes2, notes_to_play2, rate2, octave2, steps2);
+         else{
+            if(p_flag2 == 0)                  //after completing the run turn flag to zero, initialze the flag when changing to this mode, set it to one. 
+               arpeggiateDown2(notes2, notes_to_play2, rate2, octave2, steps2);
+            else if(p_flag2 == 1){
+              arpeggiate2(notes2, notes_to_play2, rate2, octave2, steps2);
+            }
+         }
+      }
+
 	}
 }

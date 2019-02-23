@@ -18,6 +18,10 @@ extern volatile uint8_t steps1;
 extern volatile uint8_t octave1;
 extern volatile uint8_t type1;
 
+//for signaling when to change the up down behavior
+extern volatile uint8_t p_flag1;
+extern volatile uint8_t p_flag2;
+
 /***********************************/
 
 extern volatile uint16_t beat2;

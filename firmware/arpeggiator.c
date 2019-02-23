@@ -424,12 +424,14 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 
                         case 4:      					//arp type 
                                 if(inc){
-                                        if(type1 < 2)
-                                                type1++;
+                                        if(type1 < 4){
+                                            type1++;
+										}
                                 }
                                 else{
-                                        if(type1 > 1)
-                                                type1--;
+                                        if(type1 > 1){
+                                            type1--;
+										}
                                 }
                                 break;
 		}
@@ -594,7 +596,7 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 				break;
                         case 4:                                         //arp type 
                                 if(inc){
-                                        if(type2 < 2)
+                                        if(type2 < 4)
                                                 type2++;
                                 }
                                 else{
@@ -940,6 +942,10 @@ ISR(TIMER0_OVF_vect){
 		octave1 = 3;
 		attribute1 = 1;
 		count = rate1;
+
+		//Initialize the up down, donw up pattern behavior
+		p_flag1 = 1;
+		p_flag2 = 1;
 
 		//channel 2 initializers
 		type2 = 1;
