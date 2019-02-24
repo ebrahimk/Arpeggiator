@@ -424,7 +424,7 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 
                         case 4:      					//arp type 
                                 if(inc){
-                                        if(type1 < 4){
+                                        if(type1 < 6){
                                             type1++;
 										}
                                 }
@@ -596,7 +596,7 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 				break;
                         case 4:                                         //arp type 
                                 if(inc){
-                                        if(type2 < 4)
+                                        if(type2 < 6)
                                                 type2++;
                                 }
                                 else{
