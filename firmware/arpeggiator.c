@@ -424,7 +424,7 @@ void set_control(uint8_t channel, uint8_t attribute, uint8_t inc){
 
                         case 4:      					//arp type 
                                 if(inc){
-                                        if(type1 < 6){
+                                        if(type1 < 4){
                                             type1++;
 										}
                                 }
@@ -939,7 +939,7 @@ ISR(TIMER0_OVF_vect){
 		type1 = 1;
 		rate1 = 1;
 		steps1 = 2;
-		octave1 = 3;
+		octave1 = 2;
 		attribute1 = 1;
 		count = rate1;
 
@@ -951,7 +951,7 @@ ISR(TIMER0_OVF_vect){
 		type2 = 1;
 		rate2 = 1;
 		steps2 = 2;
-		octave2 = 5;
+		octave2 = 2;
 		attribute2 = 1;
 		repeat2 = 1; 
 		repeat_counter =0;
