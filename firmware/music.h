@@ -43,6 +43,30 @@ extern volatile uint8_t stop;
 extern volatile uint8_t sequence_flag;
 extern volatile uint8_t sequence_to_play[4];
 
+//mode variables
+extern volatile char* mode1;
+extern volatile char* mode1_d;
+extern volatile char* mode2;
+extern volatile char* mode2_d;
+extern volatile uint8_t modal1; 
+extern volatile uint8_t modal2;
+
+extern char C[8]; 
+extern char dorian[8]; 
+extern char phrygian[8]; 
+extern char lydian[8]; 
+extern char mixolydian[8];
+extern char aeolian[8];
+extern char locrian[8];
+
+extern char C_d[8]; 
+extern char dorian_d[8]; 
+extern char phrygian_d[8]; 
+extern char lydian_d[8]; 
+extern char mixolydian_d[8];
+extern char aeolian_d[8];
+extern char locrian_d[8];
+
 void arpeggiate2(uint8_t note, uint8_t notes_to_play, uint8_t duration, uint8_t octave, uint8_t step);
 void arpeggiate(uint8_t note, uint8_t notes, uint8_t duration, uint8_t octave, uint8_t step);
 void song0(uint16_t note); //Beaver Fight Song
