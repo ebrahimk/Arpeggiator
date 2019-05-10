@@ -6,7 +6,7 @@ If you want to watch the build video where I discuss the motivation behind the p
 
 ![Image of Arpeggiator](https://github.com/ebrahimk/Arpeggiator/blob/master/photo.png)
 
-[The Arpeggiator: https://www.youtube.com/watch?v=vcvkXp_jcpI&feature=youtu.be](https://youtu.be/vcvkXp_jcpI)
+[The Arpeggiator: https://www.youtube.com/watch?v=vcvkXp_jcpI&feature=youtu.be](https://youtu.be/ow7zcvZk6DQ)
 
 *This video is currently unlisted because I am still working on it. All music and edittign is produced by me.
 
